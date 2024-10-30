@@ -1,0 +1,15 @@
+---
+interface Props {
+  message?: string;
+}
+
+const { message = "Loading..." } = Astro.props;
+---
+
+<div class="flex flex-col items-center justify-center py-12">
+  <div class="relative w-16 h-16 mb-4">
+    <div class="absolute inset-0 rounded-full border-4 border-cosmic-200 dark:border-cosmic-800"></div>
+    <div class="absolute inset-0 rounded-full border-4 border-cosmic-600 dark:border-cosmic-400 border-t-transparent animate-spin"></div>
+  </div>
+  <p class="text-gray-600 dark:text-gray-400">{message}</p>
+</div>

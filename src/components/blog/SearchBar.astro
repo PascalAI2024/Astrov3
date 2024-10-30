@@ -1,0 +1,45 @@
+---
+---
+
+<div class="relative">
+  <div class="absolute inset-0 bg-gradient-to-r from-cosmic-600/20 to-purple-600/20 rounded-xl blur-xl opacity-75"></div>
+  
+  <div class="relative">
+    <div class="flex items-center bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+      <div class="flex-1">
+        <label for="search-input" class="sr-only">Search articles</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <input
+            type="search"
+            id="search-input"
+            class="block w-full pl-10 pr-3 py-3 border-0 rounded-xl bg-transparent placeholder-gray-500 focus:ring-2 focus:ring-cosmic-500 dark:text-white sm:text-sm"
+            placeholder="Search articles by title, content, or tags..."
+          />
+        </div>
+      </div>
+      <div class="flex items-center px-4 border-l border-gray-200 dark:border-gray-700">
+        <span class="text-sm text-gray-500">
+          Press <kbd class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded">/</kbd> to search
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Enable keyboard shortcut for search
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && !['input', 'textarea'].includes((e.target as HTMLElement).tagName.toLowerCase())) {
+    e.preventDefault();
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.focus();
+    }
+  }
+});
+</script>

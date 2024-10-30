@@ -1,0 +1,160 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Container from '../../components/common/Container.astro';
+import PostGrid from '../../components/blog/PostGrid.astro';
+import SearchBar from '../../components/blog/SearchBar.astro';
+import { posts } from '../../data/posts';
+
+// Get all posts sorted by date
+const allPosts = [...posts].sort((a, b) => 
+  b.publishDate.getTime() - a.publishDate.getTime()
+);
+
+// Get unique categories and their counts
+const categories = [...new Set(posts.map(post => post.category))].map(category => ({
+  name: category,
+  count: posts.filter(post => post.category === category).length
+}));
+
+// Get unique tags and their counts
+const tags = [...new Set(posts.flatMap(post => post.tags))].map(tag => ({
+  name: tag,
+  count: posts.filter(post => post.tags.includes(tag)).length
+}));
+---
+
+<Layout title="Blog">
+  <Container>
+    <div class="py-16">
+      <header class="mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Astronomy Blog
+        </h1>
+        <p class="text-xl text-gray-600 dark:text-gray-400 mb-8">
+          Explore the cosmos through the eyes of our parody scientists.
+        </p>
+
+        <!-- Search Bar -->
+        <SearchBar />
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-12">
+        <!-- Sidebar -->
+        <aside class="space-y-8">
+          <!-- Categories -->
+          <div>
+            <h2 class="font-semibold text-gray-900 dark:text-white mb-4">
+              Categories
+            </h2>
+            <ul class="space-y-2">
+              {categories.map(category => (
+                <li class="group">
+                  <a
+                    href={`/blog/category/${category.name.toLowerCase()}`}
+                    class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <span class="text-gray-600 dark:text-gray-400 group-hover:text-cosmic-600 dark:group-hover:text-cosmic-400">
+                      {category.name}
+                    </span>
+                    <span class="text-sm text-gray-400 dark:text-gray-500 group-hover:text-cosmic-500">
+                      {category.count}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <!-- Popular Tags -->
+          <div>
+            <h2 class="font-semibold text-gray-900 dark:text-white mb-4">
+              Popular Tags
+            </h2>
+            <div class="flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <a
+                  href={`/blog/tag/${tag.name}`}
+                  class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full hover:bg-cosmic-100 dark:hover:bg-cosmic-900/50 group transition-colors"
+                >
+                  <span>#{tag.name}</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-500 group-hover:text-cosmic-600 dark:group-hover:text-cosmic-400">
+                    {tag.count}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <!-- Posts Grid -->
+        <div>
+          <div id="search-results" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              Search Results: <span id="search-count" class="text-cosmic-500">0</span> articles found
+            </h2>
+            <div id="search-posts"></div>
+          </div>
+
+          <div id="all-posts">
+            <PostGrid posts={allPosts} columns={2} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </Container>
+</Layout>
+
+<script>
+const searchPosts = (query: string) => {
+  const allPosts = document.querySelectorAll('.blog-post');
+  const searchResults = document.getElementById('search-results');
+  const searchCount = document.getElementById('search-count');
+  const allPostsSection = document.getElementById('all-posts');
+  const searchPostsContainer = document.getElementById('search-posts');
+  
+  if (!query) {
+    searchResults?.classList.add('hidden');
+    allPostsSection?.classList.remove('hidden');
+    return;
+  }
+
+  const matchingPosts = Array.from(allPosts).filter(post => {
+    const title = post.querySelector('.post-title')?.textContent?.toLowerCase() || '';
+    const excerpt = post.querySelector('.post-excerpt')?.textContent?.toLowerCase() || '';
+    const tags = post.querySelector('.post-tags')?.textContent?.toLowerCase() || '';
+    const searchTerm = query.toLowerCase();
+
+    return title.includes(searchTerm) || 
+           excerpt.includes(searchTerm) || 
+           tags.includes(searchTerm);
+  });
+
+  if (searchResults && searchCount && allPostsSection && searchPostsContainer) {
+    searchCount.textContent = matchingPosts.length.toString();
+    searchPostsContainer.innerHTML = '';
+    matchingPosts.forEach(post => {
+      const clone = post.cloneNode(true);
+      searchPostsContainer.appendChild(clone);
+    });
+
+    searchResults.classList.remove('hidden');
+    allPostsSection.classList.add('hidden');
+  }
+};
+
+// Initialize search functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  
+  if (searchInput) {
+    let debounceTimeout: number;
+    
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        searchPosts(searchInput.value);
+      }, 300);
+    });
+  }
+});
+</script>

@@ -1,0 +1,253 @@
+---
+import { quizLevels, getQuestionsByLevel } from '../../data/quiz-questions';
+import QuizProgress from './QuizProgress.astro';
+import QuizTimer from './QuizTimer.astro';
+import PowerupMenu from './PowerupMenu.astro';
+
+const powerups = [
+  {
+    id: 'time-dilation',
+    name: 'Time Dilation',
+    description: 'Adds 15 seconds to the timer',
+    icon: '⌛',
+    cost: 100
+  },
+  {
+    id: 'quantum-hint',
+    name: 'Quantum Hint',
+    description: 'Eliminates two wrong answers',
+    icon: '💫',
+    cost: 200
+  },
+  {
+    id: 'cosmic-shield',
+    name: 'Cosmic Shield',
+    description: 'Protects against one wrong answer',
+    icon: '🛡️',
+    cost: 300
+  }
+];
+
+// Get initial questions for beginner level
+const beginnerQuestions = getQuestionsByLevel('beginner');
+---
+
+<div class="max-w-4xl mx-auto">
+  <!-- Welcome Screen -->
+  <div id="welcome-screen" class="bg-gray-900 rounded-2xl p-8 shadow-xl">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-white mb-4">Welcome to Cosmic Quiz Arena</h2>
+      <p class="text-gray-400 mb-8">Test your astronomy knowledge and climb the ranks!</p>
+
+      <!-- Level Selection -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Object.entries(quizLevels).map(([key, level]) => (
+          <button 
+            class="difficulty-select relative group"
+            data-level={key}
+          >
+            <div class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 rounded-xl transition-all duration-300"></div>
+            
+            <div class="relative p-6 bg-gray-800/50 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+              <div class="text-3xl mb-3">{level.icon}</div>
+              <h3 class="text-lg font-bold text-white mb-2">{level.name}</h3>
+              <p class="text-sm text-gray-400 mb-4">{level.description}</p>
+              <div class="text-xs text-cosmic-400">Required: {level.requiredScore} points</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Area (Initially Hidden) -->
+  <div id="game-area" class="hidden">
+    <div class="bg-gray-900 rounded-2xl p-8 shadow-xl">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <div class="text-cosmic-400 mb-1">Question <span id="question-number">1</span></div>
+          <div id="current-level" class="text-sm text-gray-400"></div>
+        </div>
+
+        <div class="flex items-center gap-6">
+          <div>
+            <div class="text-sm text-gray-400 mb-1">Score</div>
+            <div class="text-xl font-bold text-cosmic-400" id="score">0</div>
+          </div>
+          <QuizTimer />
+        </div>
+      </div>
+
+      <!-- Powerups -->
+      <PowerupMenu powerups={powerups} />
+      
+      <!-- Question Area -->
+      <div class="mb-8">
+        <h3 id="question-text" class="text-xl text-white mb-6"></h3>
+        <div id="answers" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+        <div id="progress-bar" class="h-full bg-cosmic-500 transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Screen (Initially Hidden) -->
+  <div id="results-screen" class="hidden">
+    <div class="bg-gray-900 rounded-2xl p-8 shadow-xl text-center">
+      <div class="max-w-md mx-auto">
+        <div id="final-score" class="text-4xl font-bold text-cosmic-400 mb-4"></div>
+        <div id="level-progress" class="mb-8"></div>
+        <button 
+          id="play-again"
+          class="px-6 py-3 bg-cosmic-600 text-white rounded-lg hover:bg-cosmic-700 transition-colors"
+        >
+          Play Again
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { quizLevels, getQuestionsByLevel, calculateScore, getNextLevel } from '../../data/quiz-questions';
+
+  class CosmicQuizGame {
+    private currentLevel = 'beginner';
+    private score = 0;
+    private questionNumber = 0;
+    private questions = [];
+    private timer = null;
+
+    constructor() {
+      this.initializeGame();
+      this.setupEventListeners();
+    }
+
+    private initializeGame() {
+      this.questions = getQuestionsByLevel(this.currentLevel);
+      this.showWelcomeScreen();
+    }
+
+    private setupEventListeners() {
+      document.querySelectorAll('.difficulty-select').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const level = (e.currentTarget as HTMLElement).dataset.level;
+          if (level) this.startLevel(level);
+        });
+      });
+
+      document.getElementById('play-again')?.addEventListener('click', () => {
+        this.resetGame();
+      });
+    }
+
+    private startLevel(level) {
+      this.currentLevel = level;
+      this.showGameArea();
+      this.loadQuestion();
+      this.startTimer();
+    }
+
+    private showWelcomeScreen() {
+      document.getElementById('welcome-screen')?.classList.remove('hidden');
+      document.getElementById('game-area')?.classList.add('hidden');
+      document.getElementById('results-screen')?.classList.add('hidden');
+    }
+
+    private showGameArea() {
+      document.getElementById('welcome-screen')?.classList.add('hidden');
+      document.getElementById('game-area')?.classList.remove('hidden');
+      document.getElementById('results-screen')?.classList.add('hidden');
+    }
+
+    private loadQuestion() {
+      const question = this.questions[this.questionNumber];
+      if (question) {
+        document.getElementById('question-text').textContent = question.question;
+        this.displayAnswers(question.answers);
+        this.updateProgress();
+      } else {
+        this.endGame();
+      }
+    }
+
+    private displayAnswers(answers) {
+      const answersContainer = document.getElementById('answers');
+      if (answersContainer) {
+        answersContainer.innerHTML = answers.map((answer, index) => `
+          <button 
+            class="answer-button p-4 bg-gray-800 text-white rounded-lg hover:bg-cosmic-600 transition-colors"
+            data-index="${index}"
+          >
+            ${answer}
+          </button>
+        `).join('');
+
+        answersContainer.querySelectorAll('.answer-button').forEach(button => {
+          button.addEventListener('click', (e) => {
+            const index = parseInt((e.currentTarget as HTMLElement).dataset.index || '0');
+            this.handleAnswer(index);
+          });
+        });
+      }
+    }
+
+    private handleAnswer(index) {
+      const question = this.questions[this.questionNumber];
+      const isCorrect = index === question.correctAnswer;
+      
+      if (isCorrect) {
+        this.score += calculateScore(question, this.timer.getTimeRemaining(), 0);
+        this.updateScore();
+      }
+
+      this.questionNumber++;
+      this.loadQuestion();
+    }
+
+    private updateProgress() {
+      const progress = (this.questionNumber / this.questions.length) * 100;
+      document.getElementById('progress-bar').style.width = `${progress}%`;
+      document.getElementById('question-number').textContent = (this.questionNumber + 1).toString();
+    }
+
+    private updateScore() {
+      document.getElementById('score').textContent = this.score.toString();
+    }
+
+    private endGame() {
+      document.getElementById('game-area')?.classList.add('hidden');
+      document.getElementById('results-screen')?.classList.remove('hidden');
+      document.getElementById('final-score').textContent = `Final Score: ${this.score}`;
+      
+      const nextLevel = getNextLevel(this.score);
+      if (nextLevel) {
+        document.getElementById('level-progress').textContent = 
+          `Next Level: ${quizLevels[nextLevel].name} (${quizLevels[nextLevel].requiredScore - this.score} points needed)`;
+      }
+    }
+
+    private resetGame() {
+      this.score = 0;
+      this.questionNumber = 0;
+      this.initializeGame();
+    }
+
+    private startTimer() {
+      const timerElement = document.querySelector('quiz-timer');
+      if (timerElement) {
+        this.timer = new (window as any).QuizTimer(quizLevels[this.currentLevel].timeLimit);
+        this.timer.start();
+      }
+    }
+  }
+
+  // Initialize game when DOM is loaded
+  document.addEventListener('DOMContentLoaded', () => {
+    new CosmicQuizGame();
+  });
+</script>

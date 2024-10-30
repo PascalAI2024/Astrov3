@@ -1,0 +1,51 @@
+```astro
+---
+import { quizLevels } from '../../data/quiz-questions';
+
+interface Props {
+  currentScore: number;
+  currentLevel: keyof typeof quizLevels;
+}
+
+const { currentScore, currentLevel } = Astro.props;
+const nextLevel = Object.entries(quizLevels).find(([key, level]) => 
+  level.requiredScore > currentScore
+)?.[1];
+---
+
+<div class="relative mb-8">
+  <div class="absolute -inset-2 bg-gradient-to-r from-cosmic-600/20 to-purple-600/20 rounded-xl blur-xl opacity-75"></div>
+  
+  <div class="relative bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">{quizLevels[currentLevel].icon}</span>
+        <div>
+          <h3 class="text-lg font-bold text-white">{quizLevels[currentLevel].name}</h3>
+          <p class="text-sm text-gray-400">{quizLevels[currentLevel].description}</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="text-sm text-gray-400">Current Score</div>
+        <div class="text-2xl font-bold text-cosmic-400">{currentScore}</div>
+      </div>
+    </div>
+
+    {nextLevel && (
+      <div class="mt-4">
+        <div class="text-sm text-gray-400 mb-2">Progress to Next Level</div>
+        <div class="relative h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div 
+            class="absolute left-0 top-0 h-full bg-cosmic-500 transition-all duration-300"
+            style={`width: ${Math.min(100, (currentScore / nextLevel.requiredScore) * 100)}%`}
+          ></div>
+        </div>
+        <div class="flex justify-between mt-1 text-xs text-gray-500">
+          <span>{currentScore}</span>
+          <span>{nextLevel.requiredScore}</span>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+```
